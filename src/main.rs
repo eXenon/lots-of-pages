@@ -75,7 +75,7 @@ async fn handle_connection(mut stream: TcpStream, logger: Sender<String>) {
     } else {
         "HTTP/1.1 404 NOT FOUND\r\n\r\n"
     };
-    let content = gen::gen();
+    let content = gen::gen(&request.host);
     let response = format!("{status_line}{content}");
 
     // Logging
