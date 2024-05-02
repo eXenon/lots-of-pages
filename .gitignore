@@ -1,2 +1,6 @@
 # Rust build folder
 target/
+
+# Parcel cache
+dist/
+.parcel-cache/

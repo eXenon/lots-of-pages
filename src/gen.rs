@@ -1,5 +1,5 @@
 use rand::{rngs::StdRng, RngCore, SeedableRng};
-use std::{collections::HashMap, ops::Index};
+use std::collections::HashMap;
 use strfmt::strfmt;
 
 const CONTENTS: &'static str = include_str!("file.html");
@@ -213,6 +213,25 @@ const LETTERS: [&'static str; 16] = [
     "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
 ];
 
+const FIELDS: [&'static str; 16] = [
+    "Astrobiogenetics",
+    "Bioaeroacoustics",
+    "Biomechatronics",
+    "Chronoastrochemistry",
+    "Cryoastrobiology",
+    "Cryogenomics",
+    "Cyberneticontology",
+    "Exoplanetology",
+    "Geoneurogenetics",
+    "Geopaleobiotechnology",
+    "Nanobiophysics",
+    "Paleoecopharmacology",
+    "Psychoneuroimmunogenetics",
+    "Quantumomics",
+    "Xenobiogeology",
+    "Xenogenomics",
+];
+
 fn capitalize(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
@@ -221,31 +240,33 @@ fn capitalize(s: &str) -> String {
     }
 }
 
-struct Parameters {
+struct Person {
     first: String,
     middle: String,
     last: String,
     letter: String,
+    field: String,
 }
 
-fn gen_params(rng: &mut StdRng) -> Parameters {
+fn gen_person(rng: &mut StdRng) -> Person {
     let id1 = usize::try_from(rng.next_u64()).unwrap_or(0);
     let id2 = usize::try_from(rng.next_u64()).unwrap_or(0);
     let id3 = usize::try_from(rng.next_u64()).unwrap_or(0);
-    let id4 = usize::try_from(rng.next_u64()).unwrap_or(0);
-    Parameters {
-        first: FIRST[id1 % FIRST.len()].into(),
-        middle: MIDDLE[id2 % MIDDLE.len()].into(),
-        last: LAST[id3 % LAST.len()].into(),
-        letter: LETTERS[id4 % LETTERS.len()].into(),
-    }
+    let first = FIRST[id1 % FIRST.len()].into();
+    let middle = MIDDLE[id2 % MIDDLE.len()].into();
+    let last = LAST[id3 % LAST.len()].into();
+    return person_id_to_person(first, middle, last);
 }
 
-fn host_to_seed(host: &str) -> u64 {
+fn parse_host(host: &str) -> Person {
     let mut parts: Vec<&str> = host.split('-').collect();
     let first = capitalize(parts.pop().unwrap_or(FIRST[0]));
     let middle = capitalize(parts.pop().unwrap_or(MIDDLE[0]));
     let last = capitalize(parts.pop().unwrap_or(LAST[0]));
+    return person_id_to_person(first, middle, last);
+}
+
+fn person_id_to_seed(first: &String, middle: &String, last: &String) -> u64 {
     let first_i = FIRST
         .iter()
         .position(|&t| t == first)
@@ -264,15 +285,45 @@ fn host_to_seed(host: &str) -> u64 {
     return first_i + (middle_i >> 6) + (last_i >> 13);
 }
 
+fn person_id_to_letter_field(first: &String, middle: &String, last: &String) -> [String; 2] {
+    let seed: usize = usize::try_from(person_id_to_seed(&first, &middle, &last)).unwrap_or(0);
+    let field = FIELDS[seed % FIELDS.len()].into();
+    let letter = LETTERS[seed % LETTERS.len()].into();
+    return [field, letter];
+}
+
+fn person_id_to_person(first: String, middle: String, last: String) -> Person {
+    let [field, letter] = person_id_to_letter_field(&first, &middle, &last);
+    return Person {
+        first,
+        middle,
+        last,
+        letter,
+        field,
+    };
+}
+
+fn person_to_seed(person: &Person) -> u64 {
+    return person_id_to_seed(&person.first, &person.middle, &person.last);
+}
+
+fn insert_person(vars: &mut HashMap<String, String>, person: Person, suffix: &String) {
+    vars.insert("first".to_string() + suffix, person.first);
+    vars.insert("middle".to_string() + suffix, person.middle);
+    vars.insert("last".to_string() + suffix, person.last);
+    vars.insert("letter".to_string() + suffix, person.letter);
+    vars.insert("field".to_string() + suffix, person.field);
+}
+
 pub fn gen(host: &str) -> String {
-    let seed = host_to_seed(host);
-    println!("Seed: {}", seed);
+    let current = parse_host(host);
+    let seed = person_to_seed(&current);
     let mut vars = HashMap::new();
     let mut rng = StdRng::seed_from_u64(seed);
-    let params = gen_params(&mut rng);
-    vars.insert("first".to_string(), params.first);
-    vars.insert("middle".to_string(), params.middle);
-    vars.insert("last".to_string(), params.last);
-    vars.insert("letter".to_string(), params.letter);
+    insert_person(&mut vars, current, &"_current".to_string());
+    insert_person(&mut vars, gen_person(&mut rng), &"_0".to_string());
+    insert_person(&mut vars, gen_person(&mut rng), &"_1".to_string());
+    insert_person(&mut vars, gen_person(&mut rng), &"_2".to_string());
+    insert_person(&mut vars, gen_person(&mut rng), &"_3".to_string());
     strfmt(&CONTENTS, &vars).unwrap()
 }
