@@ -82,8 +82,8 @@ async fn handle_connection(mut stream: TcpStream, logger: Sender<String>) {
     let _ = logger
         .send(serde_json::to_string(&request).unwrap_or(String::from("error serializing request")));
 
-    stream.write(response.as_bytes()).await.unwrap();
-    stream.flush().await.unwrap();
+    let _ = stream.write(response.as_bytes()).await;
+    let _ = stream.flush().await;
 }
 
 #[async_std::main]
