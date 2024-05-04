@@ -258,11 +258,38 @@ fn gen_person(rng: &mut StdRng) -> Person {
     return person_id_to_person(first, middle, last);
 }
 
-fn parse_host(host: &str) -> Person {
-    let mut parts: Vec<&str> = host.split('-').collect();
-    let first = capitalize(parts.pop().unwrap_or(FIRST[0]));
-    let middle = capitalize(parts.pop().unwrap_or(MIDDLE[0]));
-    let last = capitalize(parts.pop().unwrap_or(LAST[0]));
+fn parse_host(host: String) -> Person {
+    let subdomain = host
+        .split('.')
+        .into_iter()
+        .next()
+        .unwrap_or("");
+    let mut parts: Vec<&str> = subdomain.split('-').collect();
+    
+    // Last name
+    let last_part = capitalize(parts.pop().unwrap_or(LAST[0]));
+    let last = if LAST.iter().position(|x| *x == last_part) == None {
+        LAST[0].to_string()
+    } else {
+        last_part
+    };
+    
+    // Middle name
+    let middle_part = capitalize(parts.pop().unwrap_or(MIDDLE[0]));
+    let middle = if MIDDLE.iter().position(|x| *x == middle_part) == None {
+        MIDDLE[0].to_string()
+    } else {
+        middle_part
+    };
+    
+    // First name
+    let first_part = capitalize(parts.pop().unwrap_or(FIRST[0]));
+    let first = if FIRST.iter().position(|x| *x == first_part) == None {
+        FIRST[0].to_string()
+    } else {
+        first_part
+    };
+
     return person_id_to_person(first, middle, last);
 }
 
@@ -316,7 +343,7 @@ fn insert_person(vars: &mut HashMap<String, String>, person: Person, suffix: &St
 }
 
 pub fn gen(host: &str) -> String {
-    let current = parse_host(host);
+    let current = parse_host(host.to_string());
     let seed = person_to_seed(&current);
     let mut vars = HashMap::new();
     let mut rng = StdRng::seed_from_u64(seed);
