@@ -4,7 +4,7 @@ pub fn start(incoming: Receiver<String>) {
     loop {
         let log = incoming
             .recv()
-            .unwrap_or("Failed to decode logs".to_string());
+            .unwrap_or("{\"message\": \"Failed to decode logs\"}".to_string());
         println!("{}", log)
     }
 }

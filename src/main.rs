@@ -51,9 +51,9 @@ fn parse(ip: String, port: String, incoming: [u8; 1024]) -> Request {
     return Request {
         client_ip: ip,
         client_port: port,
-        host: host,
-        path: path,
-        user_agent: user_agent,
+        host,
+        path,
+        user_agent,
     };
 }
 
@@ -79,11 +79,15 @@ async fn handle_connection(mut stream: TcpStream, logger: Sender<String>) {
     let response = format!("{status_line}{content}");
 
     // Logging
-    let _ = logger
-        .send(serde_json::to_string(&request).unwrap_or(String::from("error serializing request")));
+    let _ = logger.send(
+        serde_json::to_string(&request)
+            .unwrap_or(String::from("{\"message\": \"error serializing request\"}")),
+    );
 
-    let _ = stream.write(response.as_bytes()).await;
-    let _ = stream.flush().await;
+    // Panic if the connection is not behaving as expected
+    // This should be wrapped into a restart logic outside
+    let _ = stream.write(response.as_bytes()).await.unwrap();
+    let _ = stream.flush().await.unwrap();
 }
 
 #[async_std::main]
